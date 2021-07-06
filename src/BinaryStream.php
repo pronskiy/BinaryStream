@@ -1,7 +1,9 @@
-<?php
+<?php /** @noinspection DuplicatedCode */
+
 namespace wapmorgan\BinaryStream;
 
-class BinaryStream {
+class BinaryStream
+{
     const BIG = 'big';
     const LITTLE = 'little';
 
@@ -15,19 +17,19 @@ class BinaryStream {
     protected $offset = 0;
     protected $bitOffset = 0;
     protected $cache = array();
-    protected $endian = 'little';
+    protected $endian = self::LITTLE;
     protected $types = array(
         'little' => array(
-            'char' => 'C',
-            'short' => 'v',
+            'char'    => 'C',
+            'short'   => 'v',
             'integer' => 'V',
-            'long' => 'P',
+            'long'    => 'P',
         ),
-        'big' => array(
-            'char' => 'C',
-            'short' => 'n',
+        'big'    => array(
+            'char'    => 'C',
+            'short'   => 'n',
             'integer' => 'N',
-            'long' => 'J',
+            'long'    => 'J',
         ),
     );
     protected $labels = array(
@@ -36,56 +38,65 @@ class BinaryStream {
             32 => 'integer',
             64 => 'long',
         ),
-        'char' => array(
+        'char'    => array(
             8 => 'char'
         ),
     );
     protected $groups = array();
     protected $marks = array();
 
-    public function __construct($file, $mode = self::READ) {
+    public function __construct($file, $mode = self::READ)
+    {
         if (is_string($file)) {
             switch ($mode) {
                 case self::READ:
-                    if (!file_exists($file))
-                        throw new \Exception('File "'.$file.'" does not exist in file system! Can not open it for reading!');
-                    else
+                    if (!file_exists($file)) {
+                        throw new \Exception('File "' . $file . '" does not exist in file system! Can not open it for reading!');
+                    } else {
                         $this->fp = fopen($file, 'rb');
+                    }
                     break;
                 case self::CREATE:
-                    if (file_exists($file))
-                        throw new \Exception('File "'.$file.'" does exist in file system! Can not open it for creating!');
-                    else
+                    if (file_exists($file)) {
+                        throw new \Exception('File "' . $file . '" does exist in file system! Can not open it for creating!');
+                    } else {
                         $this->fp = fopen($file, 'wb');
+                    }
                     break;
                 case self::RECREATE:
-                    if (!file_exists($file))
-                        throw new \Exception('File "'.$file.'" does not exist in file system! Can not open it for rewriting!');
-                    else
+                    if (!file_exists($file)) {
+                        throw new \Exception('File "' . $file . '" does not exist in file system! Can not open it for rewriting!');
+                    } else {
                         $this->fp = fopen($file, 'wb');
+                    }
                     break;
                 case self::REWRITE:
-                    if (!file_exists($file))
-                        throw new \Exception('File "'.$file.'" does not exist in file system! Can not open it for rewriting!');
-                    else
+                    if (!file_exists($file)) {
+                        throw new \Exception('File "' . $file . '" does not exist in file system! Can not open it for rewriting!');
+                    } else {
                         $this->fp = fopen($file, 'r+b');
+                    }
                     break;
                 case self::APPEND:
-                    if (!file_exists($file))
-                        throw new \Exception('File "'.$file.'" does not exist in file system! Can not open it for appending!');
-                    else
+                    if (!file_exists($file)) {
+                        throw new \Exception('File "' . $file . '" does not exist in file system! Can not open it for appending!');
+                    } else {
                         $this->fp = fopen($file, 'ab');
+                    }
                     break;
                 default:
-                    throw new \Exception('Invalid open mode: '.$mode.'!');
+                    throw new \Exception('Invalid open mode: ' . $mode . '!');
             }
-        } else if (is_resource($file)) {
-            $this->fp = $file;
+        } else {
+            if (is_resource($file)) {
+                $this->fp = $file;
+            }
         }
         $this->mode = $mode;
     }
 
-    public function readBit() {
+    public function readBit()
+    {
         if ($this->bitOffset == 8) {
             $this->bitOffset = 0;
             $this->offset++;
@@ -96,10 +107,11 @@ class BinaryStream {
         }
 
         $this->bitOffset++;
-        return (bool) (($this->cache[$this->offset] >> (8 - $this->bitOffset)) & 1);
+        return (bool)(($this->cache[$this->offset] >> (8 - $this->bitOffset)) & 1);
     }
 
-    public function readBits(array $bits) {
+    public function readBits(array $bits)
+    {
         $result = array();
         foreach ($bits as $key => $value) {
             if (is_string($key)) {
@@ -112,8 +124,9 @@ class BinaryStream {
                         $this->offset++;
                     }
 
-                    if (!isset($cache[$this->offset]))
+                    if (!isset($cache[$this->offset])) {
                         $cache[$this->offset] = ord(fread($this->fp, 1));
+                    }
 
                     $this->bitOffset++;
                     $result_bit = ($result_bit << 1) + (($cache[$this->offset] >> (8 - $this->bitOffset)) & 1);
@@ -125,18 +138,20 @@ class BinaryStream {
                     $this->offset++;
                 }
 
-                if (!isset($cache[$this->offset]))
+                if (!isset($cache[$this->offset])) {
                     $cache[$this->offset] = ord(fread($this->fp, 1));
+                }
 
                 $bitName = $value;
                 $this->bitOffset++;
-                $result[$bitName] = (bool) (($cache[$this->offset] >> (8 - $this->bitOffset)) & 1);
+                $result[$bitName] = (bool)(($cache[$this->offset] >> (8 - $this->bitOffset)) & 1);
             }
         }
         return $result;
     }
 
-    public function readInteger($sizeInBits = 32) {
+    public function readInteger($sizeInBits = 32)
+    {
         if ($this->bitOffset > 0) {
             $this->bitOffset = 0;
             $this->offset++;
@@ -145,29 +160,34 @@ class BinaryStream {
         if ($sizeInBits >= 8 && $sizeInBits <= 64 && $sizeInBits % 8 == 0) {
             $bytes = $sizeInBits / 8;
             $data = fread($this->fp, $bytes);
-            if ($data !== false)
+            if ($data !== false) {
                 $this->offset += $bytes;
-            else
+            } else {
                 $this->offset = ftell($this->fp);
+            }
 
-            if ($sizeInBits == 8)
+            if ($sizeInBits == 8) {
                 return ord($data);
+            }
             // handle 24, 40, 48 and 56 bits integers (very rare case, but it happens).
             // also, handle 64-bit integer on PHP < 5.6.3
-            else if ($sizeInBits % 16 == 8 || ($sizeInBits == 64 && version_compare(PHP_VERSION, '5.6.3', '<'))) {
-                $value = 0;
-                for ($i = 0; $i < $bytes; $i++) {
-                    $value = ($value << 8) + ord($data[ $this->endian == self::BIG ? $i : abs($i - $bytes + 1) ]);
+            else {
+                if ($sizeInBits % 16 == 8 || ($sizeInBits == 64 && version_compare(PHP_VERSION, '5.6.3', '<'))) {
+                    $value = 0;
+                    for ($i = 0; $i < $bytes; $i++) {
+                        $value = ($value << 8) + ord($data[$this->endian == self::BIG ? $i : abs($i - $bytes + 1)]);
+                    }
+                    return $value;
+                } else {
+                    $value = unpack($this->types[$this->endian][$this->labels['integer'][$sizeInBits]], $data);
+                    return $value[1];
                 }
-                return $value;
-            } else {
-                $value = unpack($this->types[$this->endian][$this->labels['integer'][$sizeInBits]], $data);
-                return $value[1];
             }
         }
     }
 
-    public function readFloat($sizeInBits = 32) {
+    public function readFloat($sizeInBits = 32)
+    {
         if ($this->bitOffset > 0) {
             $this->bitOffset = 0;
             $this->offset++;
@@ -177,10 +197,11 @@ class BinaryStream {
             $bytesCount = $sizeInBits / 8;
             for ($i = 0; $i < $bytesCount; $i++) {
                 $bytes[$i] = fgetc($this->fp);
-                if ($bytes[$i] !== false)
+                if ($bytes[$i] !== false) {
                     $this->offset++;
-                else
+                } else {
                     $this->offset = ftell($this->fp);
+                }
             }
 
             // $value = unpack($this->types[$this->endian][$this->labels['float'][$sizeInBits]], $data);
@@ -190,45 +211,54 @@ class BinaryStream {
         }
     }
 
-    public function readChar() {
+    public function readChar()
+    {
         $chars = $this->readChars(1);
         return $chars[0];
     }
 
-    public function readChars($sizeInBytes = 1) {
+    public function readChars($sizeInBytes = 1)
+    {
         $chars = array();
 
         for ($i = 0; $i < $sizeInBytes; $i++) {
             $chars[$i] = fgetc($this->fp);
-            if ($chars[$i] !== false)
+            if ($chars[$i] !== false) {
                 $this->offset++;
+            }
         }
 
         return $chars;
     }
 
-    public function readString($sizeInBytes = 1) {
+    public function readString($sizeInBytes = 1)
+    {
         if ($this->bitOffset > 0) {
             $this->bitOffset = 0;
             $this->offset++;
         }
 
         $data = fread($this->fp, $sizeInBytes);
-        if ($data !== false)
+        if ($data !== false) {
             $this->offset += $sizeInBytes;
-        else
+        } else {
             $this->offset = ftell($this->fp);
+        }
         return $data;
     }
 
-    public function readGroup($nameOrFieldsList) {
+    public function readGroup($nameOrFieldsList)
+    {
         if (is_string($nameOrFieldsList)) {
-            if (isset($this->groups[$nameOrFieldsList]))
+            if (isset($this->groups[$nameOrFieldsList])) {
                 $fields = $this->groups[$nameOrFieldsList];
-            else
+            } else {
                 return null;
-        } else if (is_array($nameOrFieldsList)) {
-            $fields = $nameOrFieldsList;
+            }
+        } else {
+            if (is_array($nameOrFieldsList)) {
+                $fields = $nameOrFieldsList;
+            }
         }
 
         $group = array();
@@ -236,20 +266,32 @@ class BinaryStream {
         foreach ($fields as $field_name => $field_size_in_bits) {
             if (strpos($field_name, ':') !== false) {
                 switch (strstr($field_name, ':', true)) {
-                    case 's': $field_type = 'string'; break;
-                    case 'i': $field_type = 'integer'; break;
-                    case 'f': $field_type = 'float'; break;
-                    case 'c': $field_type = 'char'; break;
-                    case 'b': $field_type = 'bit'; break;
+                    case 's':
+                        $field_type = 'string';
+                        break;
+                    case 'i':
+                        $field_type = 'integer';
+                        break;
+                    case 'f':
+                        $field_type = 'float';
+                        break;
+                    case 'c':
+                        $field_type = 'char';
+                        break;
+                    case 'b':
+                        $field_type = 'bit';
+                        break;
                 }
                 $field_name = substr($field_name, strpos($field_name, ':') + 1);
-            } else
+            } else {
                 $field_type = 'bit';
+            }
 
-            if ($field_type == 'string' || $field_type == 'char')
+            if ($field_type == 'string' || $field_type == 'char') {
                 $size += $field_size_in_bits;
-            else
+            } else {
                 $size += $field_size_in_bits / 8;
+            }
         }
 
         $cache = array();
@@ -262,15 +304,26 @@ class BinaryStream {
         foreach ($fields as $field_name => $field_size_in_bits) {
             if (strpos($field_name, ':') !== false) {
                 switch (strstr($field_name, ':', true)) {
-                    case 's': $field_type = 'string'; break;
-                    case 'i': $field_type = 'integer'; break;
-                    case 'f': $field_type = 'float'; break;
-                    case 'c': $field_type = 'char'; break;
-                    case 'b': $field_type = 'bit'; break;
+                    case 's':
+                        $field_type = 'string';
+                        break;
+                    case 'i':
+                        $field_type = 'integer';
+                        break;
+                    case 'f':
+                        $field_type = 'float';
+                        break;
+                    case 'c':
+                        $field_type = 'char';
+                        break;
+                    case 'b':
+                        $field_type = 'bit';
+                        break;
                 }
                 $field_name = substr($field_name, strpos($field_name, ':') + 1);
-            } else
+            } else {
                 $field_type = 'bit';
+            }
 
             switch ($field_type) {
                 case 'bit':
@@ -284,7 +337,9 @@ class BinaryStream {
                         $bitOffset++;
                         $result_bit = ($result_bit << 1) + ((ord($cache[$offset]) >> (8 - $bitOffset)) & 1);
                     }
-                    if ($field_size_in_bits == 1) $result_bit = (bool) $result_bit;
+                    if ($field_size_in_bits == 1) {
+                        $result_bit = (bool)$result_bit;
+                    }
                     $group[$field_name] = $result_bit;
                     break;
 
@@ -296,7 +351,7 @@ class BinaryStream {
 
                     $group[$field_name] = null;
                     for ($i = 0; $i < $field_size_in_bits; $i++) {
-                        $group[$field_name] .= $cache[$offset+$i];
+                        $group[$field_name] .= $cache[$offset + $i];
                     }
                     $offset += $field_size_in_bits;
                     break;
@@ -314,19 +369,22 @@ class BinaryStream {
                             $data .= $cache[$offset];
                             $offset++;
                         }
-                        if ($field_size_in_bits == 8)
+                        if ($field_size_in_bits == 8) {
                             $group[$field_name] = ord($data);
+                        }
                         // handle 24, 40, 48 and 56 bits integers (very rare case, but it happens).
                         // also, handle 64-bit integer on PHP < 5.6.3
-                        else if ($field_size_in_bits % 16 == 8 || ($field_size_in_bits == 64 && version_compare(PHP_VERSION, '5.6.3', '<'))) {
-                            $value = 0;
-                            for ($i = 0; $i < $bytes; $i++) {
-                                $value = ($value << 8) + ord($data[ $this->endian == self::BIG ? $i : abs($i - $bytes + 1) ]);
+                        else {
+                            if ($field_size_in_bits % 16 == 8 || ($field_size_in_bits == 64 && version_compare(PHP_VERSION, '5.6.3', '<'))) {
+                                $value = 0;
+                                for ($i = 0; $i < $bytes; $i++) {
+                                    $value = ($value << 8) + ord($data[$this->endian == self::BIG ? $i : abs($i - $bytes + 1)]);
+                                }
+                                $group[$field_name] = $value;
+                            } else {
+                                $unpacked = unpack($this->types[$this->endian][$this->labels['integer'][$field_size_in_bits]], $data);
+                                $group[$field_name] = $unpacked[1];
                             }
-                            $group[$field_name] = $value;
-                        } else {
-                            $unpacked = unpack($this->types[$this->endian][$this->labels['integer'][$field_size_in_bits]], $data);
-                            $group[$field_name] = $unpacked[1];
                         }
                     }
                     break;
@@ -370,55 +428,67 @@ class BinaryStream {
         return $group;
     }
 
-    public function mark($name) {
+    public function mark($name)
+    {
         $this->marks[$name] = $this->offset;
     }
 
-    public function markOffset($offset, $name) {
+    public function markOffset($offset, $name)
+    {
         $this->marks[$name] = $offset;
     }
 
-    public function go($offsetOrMark) {
+    public function go($offsetOrMark)
+    {
         if (is_string($offsetOrMark)) {
-            if (isset($this->marks[$offsetOrMark]))
+            if (isset($this->marks[$offsetOrMark])) {
                 $this->go($this->marks[$offsetOrMark]);
+            }
         } else {
-            if ($offsetOrMark < 0)
+            if ($offsetOrMark < 0) {
                 fseek($this->fp, $offsetOrMark, SEEK_END);
-            else
+            } else {
                 fseek($this->fp, $offsetOrMark);
-
+            }
         }
         $this->offset = ftell($this->fp);
     }
 
-    public function isMarked($name) {
+    public function isMarked($name)
+    {
         return isset($this->marks[$name]);
     }
 
-    public function isEnd() {
+    public function isEnd()
+    {
         // feof() is simply useless (http://php.net/manual/ru/function.feof.php#67261)
         // check by fstat() call
         $stat = fstat($this->fp);
         return $this->offset >= $stat['size'];
     }
 
-    public function skip($bytes) {
-        if (fseek($this->fp, $bytes, SEEK_CUR))
+    public function skip($bytes)
+    {
+        if (fseek($this->fp, $bytes, SEEK_CUR)) {
             $this->offset += $bytes;
-        else
+        } else {
             $this->offset = ftell($this->fp);
+        }
     }
 
-    public function setEndian($endian) {
-        if (in_array($endian, array(self::BIG, self::LITTLE)))
+    public function setEndian($endian)
+    {
+        if (in_array($endian, array(self::BIG, self::LITTLE))) {
             $this->endian = $endian;
+        }
     }
 
-    public function loadConfiguration($file) {
+    public function loadConfiguration($file)
+    {
         $config = parse_ini_file($file, true);
-        if (isset($config['main']['endian']))
+        if (isset($config['main']['endian'])) {
             $this->setEndian($config['main']['endian']);
+        }
         foreach ($config as $section_name => $section_directives) {
             if (strpos($section_name, 'group:') === 0) {
                 $group_name = substr($section_name, strlen('group:'));
@@ -427,36 +497,43 @@ class BinaryStream {
         }
     }
 
-    public function saveConfiguration($file) {
+    public function saveConfiguration($file)
+    {
         $config = fopen($file, 'w');
-        fwrite($config, '[main]'.PHP_EOL.'endian='.$this->endian.PHP_EOL);
+        fwrite($config, '[main]' . PHP_EOL . 'endian=' . $this->endian . PHP_EOL);
         foreach ($this->groups as $group_name => $group_fields) {
-            fwrite($config, '[group:'.$group_name.']'.PHP_EOL);
-            foreach ($group_fields as $field_name => $field_size)
-                fwrite($config, $field_name.'='.$field_size.PHP_EOL);
+            fwrite($config, '[group:' . $group_name . ']' . PHP_EOL);
+            foreach ($group_fields as $field_name => $field_size) {
+                fwrite($config, $field_name . '=' . $field_size . PHP_EOL);
+            }
             fwrite($config, PHP_EOL);
         }
     }
 
-    public function saveGroup($name, $fields) {
+    public function saveGroup($name, $fields)
+    {
         $this->groups[$name] = $fields;
     }
 
-    public function compare($sizeInBytes, $bytes) {
+    public function compare($sizeInBytes, $bytes)
+    {
         $data = fread($this->fp, $sizeInBytes);
         fseek($this->fp, -$sizeInBytes, SEEK_CUR);
         if (is_array($bytes)) {
             $source = $bytes;
             $bytes = null;
-            foreach ($source as $byte)
+            foreach ($source as $byte) {
                 $bytes .= is_int($byte) ? chr($byte) : $byte;
+            }
         }
         return ($data === $bytes);
     }
 
-    public function writeBit($bit) {
-        if ($this->mode == self::READ)
+    public function writeBit($bit)
+    {
+        if ($this->mode == self::READ) {
             throw new \Exception('This operation is not allowed in READ mode!');
+        }
 
         $this->bitOffset++;
 
@@ -472,18 +549,20 @@ class BinaryStream {
         }
     }
 
-    public function writeBits(array $bits) {
-        if ($this->mode == self::READ)
+    public function writeBits(array $bits)
+    {
+        if ($this->mode == self::READ) {
             throw new \Exception('This operation is not allowed in READ mode!');
+        }
 
         foreach ($bits as $value) {
             if (is_array($value)) {
                 $bits_count = $value[0];
                 $value = $value[1];
                 for ($i = 0; $i < $bits_count; $i++) {
-
-                    if (!isset($this->cache[$this->offset]))
+                    if (!isset($this->cache[$this->offset])) {
                         $this->cache[$this->offset] = 0;
+                    }
 
                     $this->bitOffset++;
                     $bit = ($value >> ($bits_count - ($i + 1))) & 1;
@@ -496,8 +575,9 @@ class BinaryStream {
                     }
                 }
             } else {
-                if (!isset($this->cache[$this->offset]))
+                if (!isset($this->cache[$this->offset])) {
                     $this->cache[$this->offset] = 0;
+                }
 
                 $this->bitOffset++;
 
@@ -512,25 +592,30 @@ class BinaryStream {
         }
     }
 
-    public function writeInteger($integer, $sizeInBits) {
-        if ($this->mode == self::READ)
+    public function writeInteger($integer, $sizeInBits)
+    {
+        if ($this->mode == self::READ) {
             throw new \Exception('This operation is not allowed in READ mode!');
+        }
 
         if ($sizeInBits >= 8 && $sizeInBits <= 64 && $sizeInBits % 8 == 0) {
             $bytes = $sizeInBits / 8;
-            if ($sizeInBits == 8)
+            if ($sizeInBits == 8) {
                 $data = chr($integer);
+            }
             // handle 24, 40, 48 and 56 bits integers (very rare case, but it happens).
             // also, handle 64-bit integer on PHP < 5.6.3
-            else if ($sizeInBits % 16 == 8 || ($sizeInBits == 64 && version_compare(PHP_VERSION, '5.6.3', '<'))) {
-                $data = null;
-                for ($i = 0; $i < $bytes; $i++) {
-                    //$value = ($value << 8) + ord($data[ $this->endian == self::BIG ? $i : abs($i - $bytes + 1) ]);
-                    $data .= chr(($integer >> (8 * ($this->endian == self::BIG ? $bytes - $i - 1 : $i))) & 255);
+            else {
+                if ($sizeInBits % 16 == 8 || ($sizeInBits == 64 && version_compare(PHP_VERSION, '5.6.3', '<'))) {
+                    $data = null;
+                    for ($i = 0; $i < $bytes; $i++) {
+                        //$value = ($value << 8) + ord($data[ $this->endian == self::BIG ? $i : abs($i - $bytes + 1) ]);
+                        $data .= chr(($integer >> (8 * ($this->endian == self::BIG ? $bytes - $i - 1 : $i))) & 255);
+                    }
+                } else {
+                    $data = pack($this->types[$this->endian][$this->labels['integer'][$sizeInBits]], $integer);
                 }
             }
-            else
-                $data = pack($this->types[$this->endian][$this->labels['integer'][$sizeInBits]], $integer);
 
             if (fwrite($this->fp, $data)) {
                 $this->offset += $bytes;
@@ -540,9 +625,11 @@ class BinaryStream {
         }
     }
 
-    public function writeFloat($float, $sizeInBits) {
-        if ($this->mode == self::READ)
+    public function writeFloat($float, $sizeInBits)
+    {
+        if ($this->mode == self::READ) {
             throw new \Exception('This operation is not allowed in READ mode!');
+        }
 
         if ($sizeInBits == 32 || $sizeInBits == 64) {
             $bytes = $sizeInBits / 8;
@@ -555,24 +642,31 @@ class BinaryStream {
         }
     }
 
-    public function writeChar($char) {
-        if ($this->mode == self::READ)
+    public function writeChar($char)
+    {
+        if ($this->mode == self::READ) {
             throw new \Exception('This operation is not allowed in READ mode!');
+        }
 
-        if (is_int($char))
+        if (is_int($char)) {
             $char = chr($char);
-        if (fwrite($this->fp, $char))
+        }
+        if (fwrite($this->fp, $char)) {
             $this->offset++;
+        }
     }
 
-    public function writeString($string) {
-        if ($this->mode == self::READ)
+    public function writeString($string)
+    {
+        if ($this->mode == self::READ) {
             throw new \Exception('This operation is not allowed in READ mode!');
+        }
 
-        if (fwrite($this->fp, $string))
+        if (fwrite($this->fp, $string)) {
             $this->offset += strlen($string);
-        else
+        } else {
             $this->offset = ftell($this->fp);
+        }
     }
 
     /**
@@ -580,18 +674,24 @@ class BinaryStream {
      * @param array $bytes Array of bytes. Should contain 4 or 8 elements.
      * @return float Float
      */
-    protected function unpackFloat(array $bytes) {
+    protected function unpackFloat(array $bytes)
+    {
         // own unpacker
         $bytesCount = count($bytes);
         // deal with endianness
-        if ($this->endian == self::LITTLE) $bytes = array_reverse($bytes);
+        if ($this->endian == self::LITTLE) {
+            $bytes = array_reverse($bytes);
+        }
         // unpack exponent
         $sign = (ord($bytes[0]) & 0x80) > 0;
 
         if ($bytesCount == 4) // for 32 bit exponent size is 8 bits
+        {
             $exponent = pow(2, ((ord($bytes[0]) & 0x7F) << 1) + ((ord($bytes[1]) & 0x80) >> 7) - 127);
-        else // for 64 bit exponent size is 11 bits
+        } else // for 64 bit exponent size is 11 bits
+        {
             $exponent = pow(2, ((ord($bytes[0]) & 0x7F) << 4) + ((ord($bytes[1]) & 0xF0) >> 4) - 1023);
+        }
 
         $fraction = 1.0;
         $i = 1;
@@ -602,8 +702,9 @@ class BinaryStream {
             for ($j = 0; $j < 8; $j++) {
                 // skip first N bits of byte used for exponent
                 if ($b == 1) {
-                    if (($bytesCount == 4 && $j == 0) || ($bytesCount == 8 && $j <= 3))
-                    continue;
+                    if (($bytesCount == 4 && $j == 0) || ($bytesCount == 8 && $j <= 3)) {
+                        continue;
+                    }
                 }
 
                 if ((($byte >> (7 - $j)) & 1) == 1) {
@@ -621,7 +722,8 @@ class BinaryStream {
      * @param int $sizeInBytes 4 or 8
      * @return array Array of bytes representing float
      */
-    protected function packFloat($float, $sizeInBytes) {
+    protected function packFloat($float, $sizeInBytes)
+    {
         // unpack exponent
         $sign = $float < 0 ? true : false;
         $float = abs($float);
@@ -629,8 +731,7 @@ class BinaryStream {
         if ($sizeInBytes == 4) { // for 32 bit exponent size is 8 bits
             $exponentBits = 8;
             $exponentBase = 127;
-        }
-        else { // for 64 bit exponent size is 11 bits
+        } else { // for 64 bit exponent size is 11 bits
             $exponentBits = 11;
             $exponentBase = 1023;
         }
@@ -681,8 +782,9 @@ class BinaryStream {
             for ($j = 0; $j < 8; $j++) {
                 // skip first N bits of byte used for exponent
                 if ($b == 1) {
-                    if (($sizeInBytes == 4 && $j == 0) || ($sizeInBytes == 8 && $j <= 3))
-                    continue;
+                    if (($sizeInBytes == 4 && $j == 0) || ($sizeInBytes == 8 && $j <= 3)) {
+                        continue;
+                    }
                 }
 
                 if ($fraction > pow(2, -$i)) {
@@ -701,15 +803,30 @@ class BinaryStream {
         for ($b = ($sizeInBytes - 1); $b >= 1; $b--) {
             if ($bytes[$b] > 255) {
                 $bytes[$b] = 0;
-                $bytes[$b-1]++;
+                $bytes[$b - 1]++;
             }
         }
 
         // deal with endianness
-        if ($this->endian == self::LITTLE) $bytes = array_reverse($bytes);
+        if ($this->endian == self::LITTLE) {
+            $bytes = array_reverse($bytes);
+        }
 
         // var_dump(implode(null, array_map(function ($val) { return str_pad(decbin($val), 8, '0', STR_PAD_LEFT).PHP_EOL; }, $bytes)));
         // var_dump(implode(null, array_map(function ($val) { return dechex($val); }, $bytes)));
         return array_map('chr', $bytes);
+    }
+
+    /**
+     * @return int
+     */
+    public function getPosition(): int
+    {
+        return $this->offset;
+    }
+
+    public function readByte()
+    {
+        return $this->readString(1);
     }
 }
