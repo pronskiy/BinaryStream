@@ -817,9 +817,6 @@ class BinaryStream
         return array_map('chr', $bytes);
     }
 
-    /**
-     * @return int
-     */
     public function getPosition(): int
     {
         return $this->offset;
